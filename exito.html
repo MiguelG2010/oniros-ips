@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONIROS IPS</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://kit.fontawesome.com/a6af6903e9.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- PANTALLA DE ÉXITO -->
+<div id="pantallaExito" class="pantalla-exito">
+  <div class="contenido-exito">
+    <div class="icon-div">
+        <i class="fa-solid fa-check"></i>
+    </div>
+    <h1>Consentimiento Generado Exitosamente</h1>
+    <p>¡Gracias por usar los servicios de ONIROS IPS!</p>
+    <p><label for="">¡Por favor regresar dispositivo al enfermero!</label></p>
+  </div>
+</div>
+
+</body>
+<script>
+
+    // Easter egg: 5 clics o toques para redirigir a otra URL
+    let contadorToques = 0;
+    const maxToques = 5;
+    const tiempoReset = 1000; // 1 segundo para reset
+    let timerReset = null;
+
+    function manejarToque() {
+      contadorToques++;
+
+      // Reset si pasa mucho tiempo
+      clearTimeout(timerReset);
+      timerReset = setTimeout(() => { contadorToques = 0; }, tiempoReset);
+
+      if (contadorToques >= maxToques) {
+        // Redirigir al “secreto”
+        window.location.href = "index.html"; // <- reemplaza con tu URL
+      }
+    }
+
+    // Detecta clics y toques
+    document.addEventListener("click", manejarToque);
+    document.addEventListener("touchstart", manejarToque);
+  </script>
+</html>
