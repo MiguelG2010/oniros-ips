@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>ONIROS IPS</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- LIBRERÍAS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://kit.fontawesome.com/a6af6903e9.js" crossorigin="anonymous"></script>
+</head>
+<body>
+Cargando... Contactese con servicio tecnico
+
+
+
+<script src="logoBase64.js"></script>
+<script>
+    let firmaActual = null;
+let firmaActualDibujo = null;
+let modalCampo = null;
+
+const firmasNumericas = [2,5,7];
+
+let canvas, ctx;
+let dibujando = false;
+
+document.addEventListener("DOMContentLoaded", () => {
+     document.querySelector(".logo-wrap img").src = LOGO_BASE64;
+
+  // FECHA
+  const hoy = new Date();
+  const fechaInput = document.getElementById("fakeDate");
+
+  fechaInput.value = hoy.toLocaleDateString("es-CO");
+  fechaInput.classList.add("date-filled"); // 👈 AQUÍ
+
+  // CANVAS (AQUÍ SÍ EXISTE)
+  canvas = document.getElementById("canvasFirma");
+  ctx = canvas.getContext("2d");
+
+  
+
+  canvas.addEventListener("mousedown", e => {
+    dibujando = true;
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+  });
+
+  canvas.addEventListener("mousemove", e => {
+    if (!dibujando) return;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+  });
+
+  canvas.addEventListener("mouseup", () => dibujando = false);
+
+  // ==== SOPORTE TOUCH (TABLET / CELULAR) ====
+
+canvas.addEventListener("touchstart", e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+
+  dibujando = true;
+  ctx.beginPath();
+  ctx.moveTo(
+    touch.clientX - rect.left,
+    touch.clientY - rect.top
+  );
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  if (!dibujando) return;
+  e.preventDefault();
+
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineTo(
+    touch.clientX - rect.left,
+    touch.clientY - rect.top
+  );
+  ctx.stroke();
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+  e.preventDefault();
+  dibujando = false;
+});
+
+
+  // ESCALA
+  const wrapper = document.getElementById("wrapper");
+function ajustarEscala() {
+  const wrapper = document.getElementById("wrapper");
+
+  const hojaAncho = 850;
+  const hojaAlto = 1200;
+
+  const anchoViewport = window.innerWidth;
+  const altoViewport = window.innerHeight;
+
+  // márgenes de seguridad
+  const margenX = 20;
+  const margenY = 40;
+
+  const escalaX = (anchoViewport - margenX) / hojaAncho;
+  const escalaY = (altoViewport - margenY) / hojaAlto;
+
+  let scale;
+
+  // 👉 tablets suelen fallar por altura, priorizamos alto
+  if (anchoViewport >= 768 && anchoViewport <= 1024) {
+    scale = Math.min(escalaY, 1);
+  } else {
+    scale = Math.min(escalaX, escalaY, 1);
+  }
+
+  // seguridad
+  scale = Math.max(scale, 0.4);
+
+  wrapper.style.transform = `scale(${scale})`;
+}
+
+
+  ajustarEscala();
+  window.addEventListener("resize", ajustarEscala);
+});
+
+
+function abrirModal(num) {
+  firmaActual = document.getElementById("firma" + num);
+  modalCampo = num;
+
+  const input = document.getElementById("firmaTexto");
+  input.value = "";
+
+  // 👉 CAMBIAR TÍTULO
+  document.getElementById("modalTitle").textContent =
+    titulosModal[num] || "Ingrese el dato";
+
+  document.getElementById("modal").style.display = "flex";
+}
+
+
+
+function cerrarModal() {
+  document.getElementById("firmaTexto").value = "";
+  document.getElementById("modal").style.display = "none";
+}
+
+
+function guardarFirma() {
+  const input = document.getElementById("firmaTexto");
+  const texto = input.value.trim();
+
+  if (firmasNumericas.includes(modalCampo) && !/^\d+$/.test(texto)) {
+    alert("Porfavor solo se aceptan numeros, sin letras, caracteres especiales o espacios");
+    return;
+  }
+
+  firmaActual.textContent = texto;
+  firmaActual.classList.add("firma-finalizada");
+  cerrarModal();
+}
+
+function abrirModalDibujo(num) {
+  const campo = document.getElementById("firma" + num);
+
+  if (campo.classList.contains("firma-finalizada")) return;
+
+  firmaActualDibujo = campo;
+  limpiarCanvas();
+
+  document.getElementById("modalDibujoTitle").textContent =
+    titulosModalDibujo[num] || "Firma";
+
+  document.getElementById("modalDibujo").style.display = "flex";
+}
+
+function cerrarModalDibujo() {
+  limpiarCanvas();
+  document.getElementById("modalDibujo").style.display = "none";
+}
+
+
+function limpiarCanvas() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+function guardarFirmaDibujo() {
+  const img = document.createElement("img");
+  img.src = canvas.toDataURL("image/png");
+  img.style.height = "55px";
+  img.classList.add("imagen-firma");
+
+  firmaActualDibujo.innerHTML = "";
+  firmaActualDibujo.appendChild(img);
+
+  // 👉 CAMBIAR ESTILO A "FINALIZADO"
+  firmaActualDibujo.classList.add("firma-finalizada");
+
+  cerrarModalDibujo();
+}
+
+async function descargarPDF() {
+  mostrarLoader(); // mostrar spinner
+
+  const wrapper = document.getElementById("wrapper");
+  const area = document.querySelector(".hoja-carta");
+
+  // guardar scale original y quitar scale temporal
+  const scaleOriginal = wrapper.style.transform;
+  wrapper.style.transform = "scale(1)";
+
+  // pequeño delay para que el navegador aplique estilos antes de capturar
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  // generar canvas a alta resolución
+  const canvas = await html2canvas(area, { scale: 4, useCORS: true });
+  const imgData = canvas.toDataURL("image/png");
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p", "mm", "letter");
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const imgProps = pdf.getImageProperties(imgData);
+  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+
+  const nombre = document.getElementById("firma1").textContent.trim();
+  const id = document.getElementById("firma2").textContent.trim();
+  const nombreArchivo = `consentimiento-informado_ID${id}_${nombre.replace(/\s+/g, "_")}.pdf`;
+
+  pdf.save(nombreArchivo);
+
+  // restaurar scale original
+  wrapper.style.transform = scaleOriginal;
+
+  ocultarLoader(); // ocultar spinner
+  window.location.href = "exito.html"; // reemplaza con la URL que quieras
+}
+
+
+
+
+function mostrarModalExito() {
+  document.getElementById("modalExito").style.display = "flex";
+}
+
+function cerrarModalExito() {
+  document.getElementById("modalExito").style.display = "none";
+}
+
+
+const titulosModal = {
+  1: "Escriba su Nombre(s) y Apellido(s) completo",
+  2: "Escriba su número de identificación",
+  3: "Ciudad de expedición de su identificación",
+  5: "Escriba su Número de identificación",
+  7: "Número de identificación del acompañante"
+};
+
+const titulosModalDibujo = {
+  4: "Firma del paciente",
+  6: "Firma del acompañante o responsable"
+};
+
+function mostrarLoader() {
+  const loader = document.getElementById("loaderWrap");
+  loader.style.display = "flex"; // lo mostramos
+}
+
+function ocultarLoader() {
+  const loader = document.getElementById("loaderWrap");
+  loader.style.display = "none"; // lo ocultamos
+}
+
+
+
+
+</script>
+</body>
+</html>
